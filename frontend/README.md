@@ -27,6 +27,14 @@ Frontend e API ficam na mesma origem, então o cookie de sessão do Google funci
 
 > Não abra o `index.html` via `file://` nem em outra porta: o cookie de sessão não seria enviado e o login não funcionaria.
 
+## Documentação da API (Swagger)
+
+Com o backend rodando, acesse:
+
+**http://localhost:3000/api-docs**
+
+A especificação OpenAPI fica em `swagger.json`, na raiz do projeto, separada do código (sem anotações `@` no `server.js`).
+
 ## O que o frontend consome
 
 | Ação | Requisição |

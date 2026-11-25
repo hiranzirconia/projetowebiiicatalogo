@@ -1,0 +1,442 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Catálogo Musical API",
+    "version": "1.0.0",
+    "description": "API do Catálogo Musical: login com Google, busca de músicas no iTunes e favoritos por usuário. Para testar as rotas protegidas no Swagger, faça login antes em http://localhost:3000/auth/google."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Servidor local"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Autenticação",
+      "description": "Login com Google"
+    },
+    {
+      "name": "Sessão",
+      "description": "Status, perfil e logout"
+    },
+    {
+      "name": "Busca",
+      "description": "Consulta à API do iTunes"
+    },
+    {
+      "name": "Favoritos",
+      "description": "Favoritos do usuário logado"
+    }
+  ],
+  "paths": {
+    "/auth/google": {
+      "get": {
+        "tags": ["Autenticação"],
+        "summary": "Inicia o login com Google",
+        "description": "Redireciona o navegador para a tela de consentimento do Google.",
+        "responses": {
+          "302": {
+            "description": "Redirecionamento para o Google"
+          }
+        }
+      }
+    },
+    "/auth/google/callback": {
+      "get": {
+        "tags": ["Autenticação"],
+        "summary": "Callback do Google",
+        "description": "O Google redireciona para cá depois do login. Em caso de sucesso, a sessão é criada e o usuário volta para /?login=success.",
+        "responses": {
+          "302": {
+            "description": "Redirecionamento para o frontend"
+          }
+        }
+      }
+    },
+    "/api/status": {
+      "get": {
+        "tags": ["Sessão"],
+        "summary": "Verifica se há usuário logado",
+        "responses": {
+          "200": {
+            "description": "Status da sessão",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Status"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "get": {
+        "tags": ["Sessão"],
+        "summary": "Retorna o perfil do usuário logado",
+        "responses": {
+          "200": {
+            "description": "Perfil do usuário",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PerfilResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/logout": {
+      "get": {
+        "tags": ["Sessão"],
+        "summary": "Encerra a sessão",
+        "responses": {
+          "200": {
+            "description": "Logout realizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Mensagem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/search": {
+      "get": {
+        "tags": ["Busca"],
+        "summary": "Busca músicas no iTunes",
+        "parameters": [
+          {
+            "name": "termo",
+            "in": "query",
+            "required": true,
+            "description": "Nome da música, artista ou álbum",
+            "schema": {
+              "type": "string",
+              "example": "Coldplay"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de músicas encontradas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Musica"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Termo de busca ausente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Erro ao consultar o iTunes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/favoritos": {
+      "get": {
+        "tags": ["Favoritos"],
+        "summary": "Lista os favoritos do usuário logado",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Favoritos do usuário",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Favorito"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Favoritos"],
+        "summary": "Salva uma música nos favoritos",
+        "security": [
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NovaMusica"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Favorito salvo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Favorito"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados da música incompletos",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Erro ao salvar no MongoDB",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "cookieAuth": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "connect.sid",
+        "description": "Sessão criada após o login com Google. Faça login em /auth/google antes de testar."
+      }
+    },
+    "schemas": {
+      "Usuario": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "123456789"
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Hiran Silva"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "hiran@example.com"
+          },
+          "photo": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://lh3.googleusercontent.com/..."
+          }
+        }
+      },
+      "Status": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "authenticated": {
+            "description": "Objeto do usuário ou null",
+            "nullable": true,
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Usuario"
+              }
+            ]
+          }
+        }
+      },
+      "PerfilResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "user": {
+            "$ref": "#/components/schemas/Usuario"
+          }
+        }
+      },
+      "Musica": {
+        "type": "object",
+        "required": ["musicaId", "titulo", "artista", "album", "capa"],
+        "properties": {
+          "musicaId": {
+            "type": "string",
+            "example": "1122782283"
+          },
+          "titulo": {
+            "type": "string",
+            "example": "Yellow"
+          },
+          "artista": {
+            "type": "string",
+            "example": "Coldplay"
+          },
+          "album": {
+            "type": "string",
+            "example": "Parachutes"
+          },
+          "capa": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://is1-ssl.mzstatic.com/image/thumb/.../100x100bb.jpg"
+          }
+        }
+      },
+      "NovaMusica": {
+        "type": "object",
+        "required": ["musicaId", "titulo", "artista"],
+        "properties": {
+          "musicaId": {
+            "type": "string",
+            "example": "1122782283"
+          },
+          "titulo": {
+            "type": "string",
+            "example": "Yellow"
+          },
+          "artista": {
+            "type": "string",
+            "example": "Coldplay"
+          },
+          "album": {
+            "type": "string",
+            "example": "Parachutes"
+          },
+          "capa": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://is1-ssl.mzstatic.com/image/thumb/.../100x100bb.jpg"
+          }
+        }
+      },
+      "Favorito": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Musica"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "_id": {
+                "type": "string",
+                "example": "65f1c2a3b4c5d6e7f8a9b0c1"
+              },
+              "userId": {
+                "type": "string",
+                "example": "123456789"
+              },
+              "criadoEm": {
+                "type": "string",
+                "format": "date-time",
+                "example": "2026-11-25T10:00:00.000Z"
+              }
+            }
+          }
+        ]
+      },
+      "Erro": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": false
+          },
+          "message": {
+            "type": "string",
+            "example": "Você precisa entrar com o Google para continuar."
+          }
+        }
+      },
+      "Mensagem": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "Saiu com sucesso."
+          }
+        }
+      }
+    }
+  }
+}

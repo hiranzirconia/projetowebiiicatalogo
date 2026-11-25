@@ -8,6 +8,8 @@ import cors from "cors";
 import passport from "passport";
 import session from "express-session";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import swaggerUi from "swagger-ui-express";
+import fs from "node:fs";
 
 dotenv.config();
 
@@ -74,12 +76,24 @@ connetDB();
 app.post("/favoritos", requireAuth, criarFavorito);
 app.get("/api/search", async (req, res) => {
     try {
-        const { termo } = req.query;
+        const termo = String(req.query.termo || "").trim();
+
+        if (!termo) {
+            return res.status(400).json({
+                success: false,
+                message: "Informe um termo para buscar."
+            });
+        }
 
         const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(termo)}&entity=song&limit=10`);
+
+        if (!response.ok) {
+            throw new Error(`iTunes respondeu ${response.status}`);
+        }
+
         const data = await response.json();
 
-        const resultados = data.results.map((musica) => ({
+        const resultados = (data.results || []).map((musica) => ({
             musicaId: musica.trackId,
             titulo: musica.trackName,
             artista: musica.artistName,
@@ -89,7 +103,11 @@ app.get("/api/search", async (req, res) => {
 
         res.json(resultados);
     } catch (error) {
-        res.json({ error: error });
+        console.error("Erro na busca:", error);
+        res.status(502).json({
+            success: false,
+            message: "Não foi possível buscar músicas agora."
+        });
     }
 });
 
@@ -148,6 +166,10 @@ app.get("/api/status", (req, res) => {
         } : null
     })
 })
+
+// Swagger: documentação em http://localhost:3000/api-docs
+// A especificação fica no arquivo swagger.json (sem anotações @ no código).
+configurarSwagger();
 
 app.listen(PORT, () => console.log(`TA FUNCIONANDO AAAA http://localhost:${PORT}`));
 
@@ -232,4 +254,23 @@ function fazerLogout(req, res, next) {
             return res.json({ success: true, message: "Saiu com sucesso." });
         });
     });
+}
+
+// ============================================================================
+// SWAGGER — documentação da API em /api-docs
+// A especificação fica em swagger.json, separada do código (sem @ no server.js).
+// ============================================================================
+
+function configurarSwagger() {
+    const swaggerDocument = JSON.parse(
+        fs.readFileSync(new URL("./swagger.json", import.meta.url), "utf8")
+    );
+
+    app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+        swaggerOptions: {
+            withCredentials: true
+        }
+    }));
+
+    app.get("/api-docs.json", (req, res) => res.json(swaggerDocument));
 }
